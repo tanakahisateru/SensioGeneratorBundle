@@ -63,9 +63,10 @@ EOT
         $entityClass = $this->getContainer()->get('doctrine')->getEntityNamespace($bundle).'\\'.$entity;
         $metadata = $this->getEntityMetadata($entityClass);
         $bundle   = $this->getApplication()->getKernel()->getBundle($bundle);
-        $skeleton = Validators::validateSourceDir($skeleton)  ?: dirname(__DIR__) . static::DEFAULT_SKELETON;
+        $skeleton = $input->getOption('skeleton') ?: dirname(__DIR__) . static::DEFAULT_SKELETON;
+        $skeleton = Validators::validateSourceDir($skeleton);
 
-        $generator = new DoctrineFormGenerator($this->getContainer()->get('filesystem'),  $skeleton.'/form');
+        $generator = new DoctrineFormGenerator($this->getContainer()->get('filesystem'),  $skeleton.'form');
         $generator->generate($bundle, $entity, $metadata[0]);
 
         $output->writeln(sprintf(

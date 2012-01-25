@@ -314,7 +314,7 @@ EOT
     protected function getGenerator()
     {
         if (null === $this->generator) {
-            $this->generator = new BundleGenerator($this->getContainer()->get('filesystem'), __DIR__.'/../Resources/skeleton/bundle');
+            $this->generator = new BundleGenerator($this->getContainer()->get('filesystem'), __DIR__.'/..'.static::DEFAULT_SKELETON.'/bundle');
         }
 
         return $this->generator;
