@@ -29,6 +29,8 @@ use Sensio\Bundle\GeneratorBundle\Command\Helper\DialogHelper;
  */
 class GenerateDoctrineFormCommand extends GenerateDoctrineCommand
 {
+    private $generator;
+
     /**
      * @see Command
      */
@@ -55,6 +57,16 @@ EOT
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $dialog = $this->getDialogHelper();
+
+        if ($input->isInteractive()) {
+            if (!$dialog->askConfirmation($output, $dialog->getQuestion('Do you confirm generation', 'yes', '?'), true)) {
+                $output->writeln('<error>Command aborted</error>');
+
+                return 1;
+            }
+        }
+
         $entity = Validators::validateEntityName($input->getOption('entity'));
         list($bundle, $entity) = $this->parseShortcutNotation($entity);
 
@@ -62,7 +74,7 @@ EOT
         $metadata = $this->getEntityMetadata($entityClass);
         $bundle   = $this->getApplication()->getKernel()->getBundle($bundle);
 
-        $generator = new DoctrineFormGenerator($this->getContainer()->get('filesystem'),  __DIR__.'/../Resources/skeleton/form');
+        $generator = $this->getGenerator();
         $generator->generate($bundle, $entity, $metadata[0]);
 
         $output->writeln(sprintf(
@@ -106,6 +118,20 @@ EOT
             sprintf("You are going to generate a form for \"<info>%s:%s</info>\".", $bundle, $entity),
             '',
         ));
+    }
+
+    protected function getGenerator()
+    {
+        if (null === $this->generator) {
+            $this->generator = new DoctrineFormGenerator($this->getContainer()->get('filesystem'), __DIR__.'/../Resources/skeleton/form');
+        }
+
+        return $this->generator;
+    }
+
+    public function setGenerator(DoctrineFormGenerator $generator)
+    {
+        $this->generator = $generator;
     }
 
     protected function getDialogHelper()
