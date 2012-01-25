@@ -19,6 +19,7 @@ use Symfony\Component\Console\Output\Output;
 use Symfony\Component\Console\Command\Command;
 use Doctrine\Bundle\DoctrineBundle\Mapping\MetadataFactory;
 use Sensio\Bundle\GeneratorBundle\Generator\DoctrineFormGenerator;
+use Sensio\Bundle\GeneratorBundle\Command\Helper\DialogHelper;
 
 /**
  * Generates a form type class for a given Doctrine entity.
@@ -35,7 +36,7 @@ class GenerateDoctrineFormCommand extends GenerateDoctrineCommand
     {
         $this
             ->setDefinition(array(
-                new InputArgument('entity', InputArgument::REQUIRED, 'The entity class name to initialize (shortcut notation)'),
+                new InputOption('entity', '', InputOption::VALUE_REQUIRED, 'The entity class name to initialize (shortcut notation)'),
             ))
             ->setDescription('Generates a form type class based on a Doctrine entity')
             ->setHelp(<<<EOT
@@ -54,7 +55,7 @@ EOT
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $entity = Validators::validateEntityName($input->getArgument('entity'));
+        $entity = Validators::validateEntityName($input->getOption('entity'));
         list($bundle, $entity) = $this->parseShortcutNotation($entity);
 
         $entityClass = $this->getContainer()->get('doctrine')->getEntityNamespace($bundle).'\\'.$entity;
@@ -69,5 +70,51 @@ EOT
             $generator->getClassName(),
             $generator->getClassPath()
         ));
+    }
+
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        $dialog = $this->getDialogHelper();
+        $dialog->writeSection($output, 'Welcome to the Doctrine2 Form generator');
+
+        // namespace
+        $output->writeln(array(
+            '',
+            'This command helps you generate a form for the entity.',
+            '',
+            'First, you need to give the entity for which you want to generate a form.',
+            'You can give an entity that does not exist yet and the wizard will help',
+            'you defining it.',
+            '',
+            'You must use the shortcut notation like <comment>AcmeBlogBundle:Post</comment>.',
+            '',
+        ));
+
+        $entity = $dialog->askAndValidate($output, $dialog->getQuestion('The Entity shortcut name', $input->getOption('entity')), array('Sensio\Bundle\GeneratorBundle\Command\Validators', 'validateEntityName'), false, $input->getOption('entity'));
+        $input->setOption('entity', $entity);
+        list($bundle, $entity) = $this->parseShortcutNotation($entity);
+
+        // Entity exists?
+        $entityClass = $this->getContainer()->get('doctrine')->getEntityNamespace($bundle).'\\'.$entity;
+        $metadata = $this->getEntityMetadata($entityClass);
+
+        // summary
+        $output->writeln(array(
+            '',
+            $this->getHelper('formatter')->formatBlock('Summary before generation', 'bg=blue;fg=white', true),
+            '',
+            sprintf("You are going to generate a form for \"<info>%s:%s</info>\".", $bundle, $entity),
+            '',
+        ));
+    }
+
+    protected function getDialogHelper()
+    {
+        $dialog = $this->getHelperSet()->get('dialog');
+        if (!$dialog || get_class($dialog) !== 'Sensio\Bundle\GeneratorBundle\Command\Helper\DialogHelper') {
+            $this->getHelperSet()->set($dialog = new DialogHelper());
+        }
+
+        return $dialog;
     }
 }
